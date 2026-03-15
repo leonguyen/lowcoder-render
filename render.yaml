@@ -4,7 +4,7 @@ services:
     disk:
       name: lowcoder-data
       mountPath: /var/lib/postgresql/data
-      sizeGB: 10  # Adjust as needed
+      sizeGB: 10
     envVars:
       - key: POSTGRES_PASSWORD
         generateValue: true
@@ -21,7 +21,12 @@ services:
 
   - type: web
     name: lowcoder
+    env: node  # Node.js runtime
+    buildCommand: npm ci && npm run build  # Matches Lowcoder's scripts
+    startCommand: npm run start:prod  # Or 'npm start' if defined
     envVars:
+      - key: NODE_ENV
+        value: production
       - key: POSTGRES_PASSWORD
         fromDatabase:
           name: lowcoder-db
@@ -30,17 +35,30 @@ services:
         fromDatabase:
           name: lowcoder-db
           property: connectionString
+      - key: POSTGRES_HOST
+        fromDatabase:
+          name: lowcoder-db
+          property: host
+      - key: POSTGRES_PORT
+        fromDatabase:
+          name: lowcoder-db
+          property: port
+      - key: POSTGRES_USER
+        fromDatabase:
+          name: lowcoder-db
+          property: user
+      - key: POSTGRES_DB
+        fromDatabase:
+          name: lowcoder-db
+          property: database
       - key: REDIS_URL
         fromService:
           name: lowcoder-redis
           type: redis
           property: connectionString
       - key: SERVER_GIT_ENABLED
-        value: true  # Enable if needed for Lowcoder features
+        value: true
       - key: SERVER_OAUTH_ENABLED
         value: true
-    dockerfilePath: ./deploy/docker/Dockerfile
-    dockerContext: ./deploy/docker
-    plan: starter  # Free tier; upgrade for production
-    autoDeploy: false  # Prevent unwanted triggers from repo pushes [web:7]
+    # Lowcoder runs on port 3000 by default
 

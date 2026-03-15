@@ -1,19 +1,46 @@
 services:
-  - type: web
-    name: lowcoder-backend
-    root: server/api-service
-    buildCommand: mvn clean package -DskipTests
-    startCommand: java -Dspring.profiles.active=production -jar target/lowcoder-server-1.0-SNAPSHOT.jar
+  - type: pgsql
+    name: lowcoder-db
+    disk:
+      name: lowcoder-data
+      mountPath: /var/lib/postgresql/data
+      sizeGB: 10  # Adjust as needed
     envVars:
-      - key: MONGODB_URI
-        value: <your-mongodb-uri>
-      - key: REDIS_URL
-        value: <your-redis-uri>
-      - key: PF4J_MODE
-        value: production
+      - key: POSTGRES_PASSWORD
+        generateValue: true
+      - key: POSTGRES_USER
+        value: lowcoder
+      - key: POSTGRES_DB
+        value: lowcoder
 
-  - type: static
-    name: lowcoder-frontend
-    root: client
-    buildCommand: npm install && npm run build
-    publishPath: build
+  - type: redis
+    name: lowcoder-redis
+    envVars:
+      - key: REDIS_PASSWORD
+        generateValue: true
+
+  - type: web
+    name: lowcoder
+    envVars:
+      - key: POSTGRES_PASSWORD
+        fromDatabase:
+          name: lowcoder-db
+          property: password
+      - key: POSTGRES_URL
+        fromDatabase:
+          name: lowcoder-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          name: lowcoder-redis
+          type: redis
+          property: connectionString
+      - key: SERVER_GIT_ENABLED
+        value: true  # Enable if needed for Lowcoder features
+      - key: SERVER_OAUTH_ENABLED
+        value: true
+    dockerfilePath: ./deploy/docker/Dockerfile
+    dockerContext: ./deploy/docker
+    plan: starter  # Free tier; upgrade for production
+    autoDeploy: false  # Prevent unwanted triggers from repo pushes [web:7]
+
